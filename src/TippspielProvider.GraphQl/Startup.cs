@@ -59,7 +59,7 @@ namespace TippspielProvider.GraphQl
             {
                 context.Response.ContentType = "application/json";
 
-                return context.Response.WriteAsync($"OK - {DateTimeOffset.Now}");
+                return context.Response.WriteAsync($"OK - {DateTimeOffset.Now} {context.Session.Id}");
             });
         }
     }
