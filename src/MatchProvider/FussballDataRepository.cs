@@ -17,6 +17,7 @@ namespace MatchProvider
         private static int _remoteHits = 0;
         private static int _cacheHits = 0;
         private const int CacheDuration = 60;
+        private string _cacheMatchPrefix = "cacheGame";
         private bool _disposed;
 
         public FussballDataRepository(IOptions<MatchProviderSettings> settings, ICacheProvider cacheProvider)
@@ -126,9 +127,53 @@ namespace MatchProvider
             throw new NotImplementedException();
         }
 
-        List<MatchDataModel> IFussballDataRepository.GetMatchesByGroup(int groupId)
+        public async Task<List<MatchDataModel>> GetMatchesByGroup(int groupId)
         {
-            throw new NotImplementedException();
+            string cacheMatchGroupTag = "cacheGameByGrp" + groupId.ToString() + _settings.Value.LeagueShortcut + _settings.Value.Season;
+            string cacheMatchTag = _cacheMatchPrefix + _settings.Value.LeagueShortcut;
+
+            Matchdata[] matches = null;
+            if (_cache.IsSet(cacheMatchGroupTag))
+            {
+                matches = (Matchdata[])_cache.Get(cacheMatchGroupTag);
+
+                _cacheHits++;
+            }
+            else
+            {
+                var response = await _client.GetMatchdataByGroupLeagueSaisonAsync(groupId, _settings.Value.LeagueShortcut, _settings.Value.Season);
+
+                matches = response.Body.GetMatchdataByGroupLeagueSaisonResult;
+
+                // check if data has been found at all
+                if (matches.Count() == 1)
+                {
+                    if (matches.First().matchID == -1)
+                    {
+                        return new List<MatchDataModel>();
+                    }
+                }
+
+                _cache.Set(cacheMatchGroupTag, matches, CacheDuration);
+
+                // cache single matches
+                foreach (var m in matches)
+                {
+                    _cache.Set(cacheMatchTag + m.matchID, m, CacheDuration);
+                }
+
+                _remoteHits++;
+            }
+
+            var mList = new List<MatchDataModel>();
+
+            foreach (var m in matches)
+            {
+                mList.Add(Create(m));
+            }
+
+            return mList;
+
         }
 
         List<MatchDataModel> IFussballDataRepository.GetAllMatches()
@@ -149,6 +194,39 @@ namespace MatchProvider
         public int GetCacheHits()
         {
             return _cacheHits;
+        }
+
+        private static MatchDataModel Create(Matchdata match)
+        {
+            var matchModelObj = new MatchDataModel
+            {
+                MatchId = match.matchID,
+                GroupId = match.groupOrderID,
+                KickoffTime = match.matchDateTime,
+                KickoffTimeUtc = match.matchDateTimeUTC,
+                HomeTeamId = match.idTeam1,
+                AwayTeamId = match.idTeam2,
+                HomeTeamScore = match.pointsTeam1,
+                AwayTeamScore = match.pointsTeam2,
+                HomeTeamIcon = match.iconUrlTeam1,
+                AwayTeamIcon = match.iconUrlTeam2,
+                HomeTeam = match.nameTeam1,
+                AwayTeam = match.nameTeam2,
+                IsFinished = match.matchIsFinished,
+                LeagueShortcut = match.leagueShortcut
+            };
+
+            if (match.matchResults != null && match.matchResults.Count > 0)
+            {
+                var result = (from r in match.matchResults orderby r.resultTypeId descending select r).FirstOrDefault();
+
+                if (result == null) return matchModelObj;
+
+                matchModelObj.HomeTeamScore = result.pointsTeam1;
+                matchModelObj.AwayTeamScore = result.pointsTeam2;
+            }
+
+            return matchModelObj;
         }
 
         public void Dispose()

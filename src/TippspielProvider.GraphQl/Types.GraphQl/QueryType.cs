@@ -1,5 +1,4 @@
 ﻿using HotChocolate.Types;
-using MatchProvider.Contracts;
 
 namespace TippspielProvider.GraphQl.Types.GraphQl
 {
@@ -7,7 +6,7 @@ namespace TippspielProvider.GraphQl.Types.GraphQl
     {
         protected override void Configure(IObjectTypeDescriptor<Query> descriptor)
         {
-            descriptor.Field(t => t.GetMatches(default))
+            descriptor.Field(t => t.GetMatchesAsync(default))
                 .Name("matches")
                 .Type<ListType<MatchDataModelType>>();
 

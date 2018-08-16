@@ -15,11 +15,11 @@ namespace TippspielProvider.GraphQl
             _matchProvider = matchProvider;
         }
 
-        public IEnumerable<MatchDataModel> GetMatches(int? groupId)
+        public async Task<IEnumerable<MatchDataModel>> GetMatchesAsync(int? groupId)
         {
             if (groupId.HasValue)
             {
-                return _matchProvider.GetMatchesByGroup(groupId.Value);
+                return await _matchProvider.GetMatchesByGroup(groupId.Value);
             }
             else
             {

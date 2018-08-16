@@ -20,7 +20,7 @@ namespace MatchProvider.Contracts
         MatchDataModel GetMatchData(int matchId);
 
         List<MatchDataModel> GetMatchesByCurrentGroup();
-        List<MatchDataModel> GetMatchesByGroup(int groupId);
+        Task<List<MatchDataModel>> GetMatchesByGroup(int groupId);
         List<MatchDataModel> GetAllMatches();
     }
 }
