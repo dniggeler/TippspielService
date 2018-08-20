@@ -9,6 +9,7 @@ using MatchProvider.Contracts.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,9 +39,10 @@ namespace TippspielProvider.GraphQl
                 c.Options.ExecutionTimeout = TimeSpan.FromMinutes(5);
                 c.RegisterQueryType<QueryType>();
             });
-            //services.AddGraphQL(c => c.RegisterType<MatchDataModelType>());
             
             services.Configure<MatchProviderSettings>(_configuration.GetSection("MatchProvider"));
+
+            services.AddRouting();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -53,14 +55,18 @@ namespace TippspielProvider.GraphQl
 
             app.UseGraphQL();
 
+            var routeBuilder = new RouteBuilder(app);
 
-            // fallback for root GET
-            app.Run(context =>
+            routeBuilder.MapGet("/", context =>
             {
                 context.Response.ContentType = "application/json";
 
                 return context.Response.WriteAsync($"OK - {DateTimeOffset.Now}");
             });
+
+            var routes = routeBuilder.Build();
+
+            app.UseRouter(routes);
         }
     }
 }
